@@ -154,8 +154,8 @@ class ContextResNet(nn.Module):
         self.layer1 = self._make_layer(block, 16, num_blocks[0], stride=1)
         self.layer2 = self._make_layer(block, 32, num_blocks[1], stride=2)
         self.layer3 = self._make_layer(block, 64, num_blocks[2], stride=2)
-        self.context_layer = SeqNet(16, 16, 16, 1, 0)
-        self.linear = nn.Linear(64, num_classes)
+        self.context_layer = SeqNet(64, 64, 64, 1, 0)
+        self.linear = nn.Linear(128, num_classes)
 
         self.apply(_weights_init)
 
@@ -171,9 +171,15 @@ class ContextResNet(nn.Module):
     def forward(self, x):
         out = F.relu(self.bn1(self.conv1(x)))
         out = self.layer1(out)
-        out = self.context_layer(out)
+        # out = self.context_layer(out)
         out = self.layer2(out)
         out = self.layer3(out)
+        # [1, 64, 8, 8]
+        context_out = self.context_layer(out)
+        # [1, 64, 8, 8]
+        
+        out = torch.cat([out, context_out], 1)
+        
         out = F.avg_pool2d(out, out.size()[3])
         out = out.view(out.size(0), -1)
         out = self.linear(out)
